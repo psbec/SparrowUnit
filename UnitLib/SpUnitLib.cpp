@@ -35,10 +35,25 @@ bool SpOSUnHookApi(void* ApiFun);
 /******************************************************************************
     global variable
 ******************************************************************************/
-std::vector<SpUnit*> gtUTCaseDB;
-std::vector<testing::Environment*> gEnv;
+struct SPUDB {
+    std::vector<SpUnit*> cases;
+    std::vector<testing::Environment*> env;
+};
 
-SpUnit    *currentUnitCase=NULL;
+SPUDB*  spudb = NULL;
+
+/******************************************************************************
+    Sparrow DB
+******************************************************************************/
+int SpCaseDB::Register(SpUnit *p)
+{
+    if (!spudb)
+        spudb = new SPUDB;
+    spudb->cases.push_back(p);
+    return 0;
+}
+
+SpUnit* currentUnitCase=NULL;
 
 namespace Compare {
     std::string ToLower(std::string str)
@@ -72,18 +87,9 @@ static bool writeStringToFile(const std::string &tFile, const std::string &tCont
 ******************************************************************************/
 namespace testing {
     Environment* AddGlobalTestEnvironment(Environment* env) {
-        gEnv.push_back(env);
+        spudb->env.push_back(env);
         return env;
     }
-}
-
-/******************************************************************************
-    Sparrow DB
-******************************************************************************/
-int  SpCaseDB::Register(SpUnit *p)
-{
-    gtUTCaseDB.push_back(p);
-    return 0;
 }
 
 class CaseStat {
@@ -707,9 +713,9 @@ static void SpShowHelp()
 }
 static void SpShowCaseList()
 {
-    std::vector<SpUnit*>::iterator it = gtUTCaseDB.begin();
+    std::vector<SpUnit*>::iterator it = spudb->cases.begin();
     printf("Test case list: \n");
-    for (; it!=gtUTCaseDB.end(); it++)
+    for (; it!=spudb->cases.end(); it++)
         printf("    %s\n", (*it)->getTestName().c_str());
 }
 
@@ -739,11 +745,11 @@ int SpUnitRunAll(void)
     size_t i;
     int iCounter = 0;
 
-    for (i=0; i<gEnv.size(); i++)
-        gEnv[i]->SetUp();
+    for (i=0; i<spudb->env.size(); i++)
+        spudb->env[i]->SetUp();
 
-    std::vector<SpUnit*>::iterator it = gtUTCaseDB.begin();
-    for (; it!=gtUTCaseDB.end(); it++) {
+    std::vector<SpUnit*>::iterator it = spudb->cases.begin();
+    for (; it!=spudb->cases.end(); it++) {
         if (!(*it)->isMatch(gArgFilter))
             continue;
 
@@ -752,8 +758,8 @@ int SpUnitRunAll(void)
             iRetFinal++;
     }
 
-    for (i=0; i<gEnv.size(); i++)
-        gEnv[i]->TearDown();
+    for (i=0; i<spudb->env.size(); i++)
+        spudb->env[i]->TearDown();
 
     ColorType tColor = ColorType_Green;
     if (iRetFinal)
