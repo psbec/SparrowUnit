@@ -495,8 +495,11 @@ bool SpMockImp::hookApi(void* ApiFun, void* HookFun)
 			TempProtectVar,&MemInfo.Protect)) {
         memcpy(ApiBackup,(const void*)ApiFun, sizeof(ApiBackup));
 		*(BYTE*)ApiFun = FLATJMPCMD;
+#ifdef __x86_64__
+        *(unsigned long long*)((BYTE*)ApiFun + FLATJMPCMD_LENGTH) = (unsigned long long)HookFun -(unsigned long long)ApiFun - FLATJMPCODE_LENGTH;
+#else
 		*(DWORD*)((BYTE*)ApiFun + FLATJMPCMD_LENGTH) = (DWORD)HookFun -(DWORD)ApiFun - FLATJMPCODE_LENGTH;
-
+#endif
 		VirtualProtect(MemInfo.BaseAddress,MemInfo.RegionSize,
 				MemInfo.Protect,&TempProtectVar);
 		IsSuccess = TRUE;
